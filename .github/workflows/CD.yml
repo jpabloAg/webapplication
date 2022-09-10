@@ -1,46 +1,33 @@
-name: CD
+name: dotnet-docker-heroku CD
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "master" ]
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+    
+#set environment variables 
+env:
+  HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+  APP_NAME: ${{ secrets.HEROKU_API_NAME }}
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  build:
-    runs-on: ubuntu-latest
+      
+  deploy:
+    name: Deploy to Heroku
+    runs-on: ubuntu-18.04
     steps:
-    - name: Check out repository
+
+    # Clone the repository
+    - name: Checkout
       uses: actions/checkout@v2
-      with:
-          fetch-depth: 0
-    - name: Heroku login credentials
+
+    # Build Docker image
+    - name: Docker build
+      run: docker login --username=_ --password=$HEROKU_API_KEY registry.heroku.com
+
+    # Push the Docker image to Heroku Container Registry
+    - name: Publish
       run: |
-          cat > ~/.netrc <<EOF
-            machine api.heroku.com
-              login $HEROKU_EMAIL
-              password $HEROKU_API_KEY
-            machine git.heroku.com
-              login $HEROKU_EMAIL
-              password $HEROKU_API_KEY
-          EOF
-      env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-          HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
-    - name: Add Heroku remote
-      id: add
-      run: |
-        heroku git:remote --app $HEROKU_API_NAME
-        echo ::set-output name=exit_code::$?
-      env:
-          HEROKU_API_NAME: ${{ secrets.HEROKU_API_NAME }}
-          
-    - name: Push to Heroku
-      if: steps.add.outputs.exit_code == 0
-      run: |
-        heroku --app buildpacks:set jincod/dotnetcore 
-        git push heroku master
+        heroku container:push web -a $APP_NAME
+        heroku container:release web -a $APP_NAME
