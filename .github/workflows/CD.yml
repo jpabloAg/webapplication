@@ -31,10 +31,10 @@ jobs:
       env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
           HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
+    - run: heroku buildpacks:set jincod/dotnetcore 
     - name: Add Heroku remote
       id: add
       run: |
-        heroku buildpacks:set jincod/dotnetcore 
         heroku git:remote --app $HEROKU_API_NAME
         echo ::set-output name=exit_code::$?
       env:
